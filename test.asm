@@ -5,7 +5,7 @@
 
 	mov bx, MSG_REAL_MODE
 	call print_string
-
+    
 	call switch_to_pm
 
 	jmp $

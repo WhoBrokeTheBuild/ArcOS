@@ -11,7 +11,10 @@ switch_to_pm:
 	or eax, 0x1
 	mov cr0, eax
 	
-    ;jmp $
+	mov bx, MSG_ABOUT_TO_SWITCH
+	call print_string
+	
+    jmp $
 
 	jmp GDT_CODE_SEG:init_pm	; Make a far jump to the 32-bit code. This 
 	                            ; forces the CPU to flush its cache of 
