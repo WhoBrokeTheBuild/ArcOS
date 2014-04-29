@@ -199,7 +199,7 @@ strcmp:
 	clc
 	ret
 
-.done
+.done:
 	stc
 	ret
 
