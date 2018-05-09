@@ -19,7 +19,7 @@ load_kernel_into_memory:
 
 	;; set up parameters for disk_read routine
 	mov bx, KERNEL_OFFSET
-	mov dh, 5
+	mov dh, 17
 	mov dl, [BOOT_DRIVE]
 	call disk_read
 

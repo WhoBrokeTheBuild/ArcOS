@@ -1,4 +1,4 @@
-#include <kernel/ports.h>
+#include <kernel/cpu/ports.h>
 
 unsigned char read_port_byte(unsigned short port) {
   unsigned char result;
