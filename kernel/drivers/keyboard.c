@@ -2,7 +2,13 @@
 #include <kernel/cpu/ports.h>
 #include <kernel/cpu/isr.h>
 
-const char sc_ascii[] = {
+int _index = 0;
+char _input[256];
+
+keycb_t _input_cb = 0;
+keycb_t _enter_cb = 0;
+
+const char ASCII_SCANCODES[] = {
     '?',
     '?',
     '1',
@@ -63,20 +69,59 @@ const char sc_ascii[] = {
     ' '
 };
 
-#define SC_MAX 57
+#define KEY_ENTER       0x1C
+#define KEY_BACKSPACE   0x0E
 
 static void _key_handler() {
     uint8_t scancode = read_port_byte(0x60);
 
-    if (scancode > SC_MAX) return;
+    if (scancode == KEY_ENTER) {
+        if (_enter_cb) {
+            _enter_cb();
+        }
 
-    scr_putc(sc_ascii[scancode]);
+        _index = 0;
+        _input[_index] = '\0';
+
+        return;
+    }
+
+    if (scancode == KEY_BACKSPACE) {
+        if (_index > 0) --_index;
+        _input[_index] = '\0';
+
+        if (_input_cb) {
+            _input_cb();
+        }
+
+        return;
+    }
+
+    if (scancode > sizeof(ASCII_SCANCODES)) return;
+    if (ASCII_SCANCODES[scancode] == '?') return;
+
+    _input[_index++] = ASCII_SCANCODES[scancode];
+    _input[_index] = '\0';
+
+    if (_input_cb) {
+        _input_cb();
+    }
 }
 
 void key_init() {
-    char s[10];
-    itoa(_key_handler, s, 10);
-    scr_print_at(s, 0, 0);
+    _input[0] = '\0';
 
     isr_register(IRQ1, _key_handler);
+}
+
+void key_set_input_callback(keycb_t cb) {
+    _input_cb = cb;
+}
+
+void key_set_enter_callback(keycb_t cb) {
+    _enter_cb = cb;
+}
+
+char * key_get_input() {
+    return _input;
 }

@@ -34,9 +34,21 @@ void scr_clear() {
     scr_set_cursor(0, 0);
 }
 
+void scr_clear_line() {
+    char * vid_mem_ptr = (char *)SCR_VIDEO_ADDRESS;
+    int offset = _scr_get_offset(0, _scr_y);
+
+    for (int i = offset; i < offset + (SCR_WIDTH * 2); i += 2) {
+        vid_mem_ptr[i + 0] = ' ';
+        vid_mem_ptr[i + 1] = _flags;
+    }
+
+    scr_set_cursor(0, _scr_y);
+}
+
 void scr_putc(char c) {
     if (c == '\n') {
-        scr_newline_cursor();
+        scr_cursor_newline();
         return;
     }
 
@@ -46,7 +58,7 @@ void scr_putc(char c) {
     vid_mem_ptr[offset++] = c;
     vid_mem_ptr[offset++] = _flags;
 
-    scr_shift_cursor();
+    scr_cursor_shift(1);
 }
 
 void scr_putc_at(char c, int x, int y) {
@@ -77,17 +89,20 @@ void scr_set_cursor(int x, int y) {
     write_port_byte(REG_SCREEN_DATA, (unsigned char)(offset & 0xFF));
 }
 
-void scr_shift_cursor() {
-    ++_scr_x;
+void scr_cursor_shift(int x) {
+    _scr_x += x;
+    if (_scr_x < 0) {
+        _scr_x = 0;
+    }
     if (_scr_x >= SCR_WIDTH) {
-        scr_newline_cursor();
+        scr_cursor_newline();
         return;
     }
 
     scr_set_cursor(_scr_x, _scr_y);
 }
 
-void scr_newline_cursor() {
+void scr_cursor_newline() {
     _scr_x = 0;
     _scr_y++;
     if (_scr_y >= SCR_HEIGHT) {
