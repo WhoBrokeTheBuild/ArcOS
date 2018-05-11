@@ -24,22 +24,29 @@ disk_read:
 
 	;; in case of read error
 	;; show the message about it
-	jc disk_read_error
+	;jc .read_error
 
 	;; check if we read expected count of sectors
 	;; if not, show the message with error
-	;; pop dx
-	;; cmp dh, al
-	;; jne disk_read_error
+	;pop dx
+	;cmp dh, al
+	;jne .read_all_error
 
 	;; restore register values and ret
 	popa
 	ret
 
-disk_read_error:
+.read_error:
     mov bx, MSG_DISK_READ_FAILED
     call print_string_16
 
 	jmp $
 
+.read_all_error:
+    mov bx, MSG_DISK_READ_ALL_FAILED
+    call print_string_16
+
+	jmp $
+
 MSG_DISK_READ_FAILED db "Failed to read disk", 0
+MSG_DISK_READ_ALL_FAILED db "Failed to read all sectors", 0

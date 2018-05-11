@@ -19,7 +19,7 @@ load_kernel_into_memory:
 
 	;; set up parameters for disk_read routine
 	mov bx, KERNEL_OFFSET
-	mov dh, 17
+	mov dh, 128
 	mov dl, [BOOT_DRIVE]
 	call disk_read
 
@@ -28,22 +28,32 @@ load_kernel_into_memory:
 	ret
 
 %include "boot/disk/disk.asm"
+%include "boot/util/print_string.asm"
 %include "boot/pm/gdt.asm"
 %include "boot/pm/switch_to_pm.asm"
-%include "boot/util/print_string.asm"
+%include "boot/lm/detect_lm.asm"
+%include "boot/lm/switch_to_lm.asm"
 
 [bits 32]
 
 pm_start:
 
-    mov ebx, MSG_PROT_MODE
-    call print_string
+    ;call detect_lm
+    call execute_kernel
+	jmp $
 
+[bits 64]
+
+lm_start:
+
+    call execute_kernel
+    jmp $
+
+execute_kernel:
     call KERNEL_OFFSET
-	jmp $				; Hang
+    jmp $
 
 BOOT_DRIVE      db 0
-MSG_PROT_MODE	db "Successfully landed in 32-bit Protected Mode", 0
 
 times 510-($-$$) db 0
 dw 0xAA55

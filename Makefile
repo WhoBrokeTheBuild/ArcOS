@@ -3,7 +3,7 @@ CC   ?= clang
 LD   ?= ld
 AR	 ?= ar
 ASM  ?= nasm
-QEMU ?= qemu-system-i386
+QEMU ?= qemu-system-x86_64
 
 CFLAGS += -g -I libc -I. -ffreestanding -Wall -Wextra -fno-exceptions -nobuiltininc -m32 -std=c11
 
@@ -22,7 +22,7 @@ LIBC_OBJ = $(patsubst %.c,%.o,$(LIBC_SRC))
 all: $(OUT)
 
 run: all
-	"$(QEMU)" -drive file=$(OUT),index=0,media=disk,format=raw
+	"$(QEMU)" -d guest_errors -drive file=$(OUT),index=0,media=disk,format=raw
 
 clean:
 	rm -rf *.bin *.dis *.o *.elf $(OUT)
@@ -35,6 +35,7 @@ $(LIBC): $(LIBC_OBJ)
 	$(AR) rcs $(LIBC) $(LIBC_OBJ)
 
 $(KERNEL): boot/kernel_entry.o $(KERNEL_OBJ) $(LIBC)
+	$(LD) -m elf_i386 -o $@.elf -Ttext 0x1000 $^ # for objdump
 	$(LD) -m elf_i386 -o $@ -Ttext 0x1000 $^ --oformat binary
 
 %.o: %.c
