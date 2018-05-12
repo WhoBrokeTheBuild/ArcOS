@@ -3,9 +3,9 @@ CC   ?= clang
 LD   ?= ld
 AR	 ?= ar
 ASM  ?= nasm
-QEMU ?= qemu-system-x86_64
+QEMU ?= qemu-system-i386
 
-CFLAGS += -g -I libc -I. -ffreestanding -Wall -Wextra -fno-exceptions -nobuiltininc -m32 -std=c11
+CFLAGS += -g -I libc -I. -ffreestanding -Wall -Wextra -fno-exceptions -nobuiltininc -nostdlib -m32 -std=c11
 
 OUT    = arcos.bin
 BOOT   = boot/boot.bin

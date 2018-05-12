@@ -32,23 +32,25 @@
 #define VGA_MISC_READ   0x3CC
 #define VGA_MISC_WRITE  0x3C2
 
+#define VGA_WIDTH  320
+#define VGA_HEIGHT 200
 
 void _dis_set_plane(uint32_t plane) {
     uint8_t pmask;
 
     plane &= 3;
-    pmask = 1 << p;
+    pmask = 1 << plane;
 
     // Set Read Plane
     write_port_byte(VGA_GFX_INDEX, 4);
-    write_port_byte(VGA_GFX_DATA, p);
+    write_port_byte(VGA_GFX_DATA, plane);
 
     // Set Write Plane
     write_port_byte(VGA_SEQ_INDEX, 2);
-    write_port_byte(VGA_SEQ_DATAT, pmask);
+    write_port_byte(VGA_SEQ_DATA, pmask);
 }
 
-uint32_t _dis_get_framebuf_seg() {
+uint32_t _dis_get_fb_seg() {
     uint32_t seg;
 
     write_port_byte(VGA_GFX_INDEX, 6);
@@ -69,20 +71,30 @@ uint32_t _dis_get_framebuf_seg() {
     return 0;
 }
 
+uint8_t misc = 0x63;
+
+uint8_t seq[] = { 0x03, 0x01, 0x0F, 0x00, 0x0E };
+
+uint8_t crtc[] = { 0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F, 0x00, 0x41, 0x00, 0x00, 0x00,
+                   0x00, 0x00, 0x00, 0x9C, 0x0E, 0x8F, 0x28, 0x40, 0x96, 0xB9, 0xA3, 0xFF };
+
+uint8_t gfx[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x0F, 0xFF };
+
+uint8_t atr[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C,
+                  0x0D, 0x0E, 0x0F, 0x41, 0x00, 0x0F, 0x00,	0x00 };
+
 void dis_init() {
     unsigned int i;
 
     // Write Misc Registers
 
-    write_port_byte(VGA_MISC_WRITE, 0xE3);
+    write_port_byte(VGA_MISC_WRITE, misc);
 
     // Write Sequencer Registers
 
-    uint8_t seq[] = { 0x03, 0x01, 0x08, 0x00, 0x06 };
-
     for (i = 0; i < VGA_SEQ_COUNT; ++i) {
         write_port_byte(VGA_SEQ_INDEX, i);
-        write_port_byte(seq[i]);
+        write_port_byte(VGA_SEQ_DATA, seq[i]);
     }
 
     // Unlock CRTC Registers
@@ -94,10 +106,6 @@ void dis_init() {
 
     // Write CRTC Registers
 
-    uint8_t crtc[] = { 0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F, 0x00,
-                       0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x9C, 0x0E,
-                       0x8F, 0x28, 0x40, 0x96, 0xB9, 0xA3, 0xFF };
-
     for (i = 0; i < VGA_CRTC_COUNT; ++i) {
         write_port_byte(VGA_CRTC_INDEX, i);
         write_port_byte(VGA_CRTC_DATA, crtc[i]);
@@ -105,18 +113,12 @@ void dis_init() {
 
     // Write Graphics Registers
 
-    uint8_t gfx[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x0F, 0xFF };
-
     for (i = 0; i < VGA_GFX_COUNT; ++i) {
         write_port_byte(VGA_GFX_INDEX, i);
         write_port_byte(VGA_GFX_DATA, gfx[i]);
     }
 
     // Write Attribute Controller Registers
-
-    uint8_t atr[] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                      0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x41, 0x00,
-                      0x0F, 0x00, 0x00 };
 
     for (i = 0; i < VGA_ATR_COUNT; ++i) {
         (void) read_port_byte(VGA_INSTAT_READ);
@@ -127,4 +129,57 @@ void dis_init() {
 
     (void) read_port_byte(VGA_INSTAT_READ);
     write_port_byte(VGA_ATR_INDEX, 0x20);
+
+    dis_clear(0x00);
+
+    uint8_t color = 0;
+    for (int x = 0; x < VGA_WIDTH; ++x) {
+        for (int y = 0; y < VGA_HEIGHT; ++y) {
+            dis_draw_pixel(x, y, color);
+            color++;
+        }
+    }
+    //dis_draw_pixel(100, 100, 1);
+    //dis_draw_pixel(80, 80, 0x0F);
+    //dis_draw_line(0, 0, 100, 100, 0x0F);
+}
+
+void dis_clear(uint8_t color) {
+    uint16_t x, y;
+
+    for (x = 0; x < VGA_WIDTH; ++x) {
+        for (y = 0; y < VGA_HEIGHT; ++y) {
+            dis_draw_pixel(x, y, color);
+        }
+    }
+}
+
+void dis_draw_pixel(uint16_t x, uint16_t y, uint8_t color) {
+    write_byte(_dis_get_fb_seg(), VGA_WIDTH * y + x, color);
+}
+
+void dis_draw_line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t color) {
+    if (x1 > x2) {
+        dis_draw_line(x2, y1, x1, y2, color);
+        return;
+    }
+    if (y1 > y2) {
+        dis_draw_line(x1, y2, x2, y1, color);
+        return;
+    }
+
+    uint16_t x, y;
+    for (x = x1; x < x2; ++x) {
+        for (y = y1; y < y2; ++y) {
+            dis_draw_pixel(x, y, color);
+        }
+    }
+}
+
+void dis_draw_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t color) {
+
+}
+
+void dis_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t color) {
+
 }
